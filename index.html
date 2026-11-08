@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>六年級自然「水岸地貌」漫畫互動檢核挑戰</title>
+    <style>
+        :root {
+            --primary: #1976D2;
+            --secondary: #009688;
+            --success: #4CAF50;
+            --danger: #E53935;
+            --warning: #FB8C00;
+            --bg-color: #F0F4F8;
+            --card-bg: #FFFFFF;
+            --text-color: #263238;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* 隱藏版管理員微小按鈕 (最左上角) */
+        #admin-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            z-index: 9999;
+            cursor: pointer;
+        }
+
+        /* 頂部常駐資訊列 */
+        #status-bar {
+            position: sticky;
+            top: 0;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 12px 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .score-val { color: var(--primary); font-size: 32px; }
+        .time-val { color: var(--danger); font-size: 32px; font-variant-numeric: tabular-nums; }
+
+        /* 畫面容器 */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 85vh;
+            padding: 24px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        /* 首頁迎新 */
+        .home-title {
+            font-size: 42px;
+            color: var(--primary);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .home-subtitle {
+            font-size: 26px;
+            color: #546E7A;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .input-name {
+            font-size: 28px;
+            padding: 15px 20px;
+            width: 85%;
+            max-width: 420px;
+            border: 3px solid #B0BEC5;
+            border-radius: 16px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+            margin-bottom: 25px;
+        }
+        .input-name:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(25, 118, 210, 0.3);
+        }
+
+        /* 漫畫圖片與題目卡片 */
+        .scene-header {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--secondary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .comic-frame {
+            width: 100%;
+            max-height: 380px;
+            object-fit: contain;
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 26px 30px;
+            width: 100%;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+            font-size: 26px;
+            line-height: 2.1;
+        }
+        
+        /* 填空輸入框 */
+        .fill-input {
+            font-size: 26px;
+            font-weight: bold;
+            width: 150px;
+            border: none;
+            border-bottom: 4px solid var(--primary);
+            background-color: #E3F2FD;
+            border-radius: 8px 8px 0 0;
+            padding: 4px 10px;
+            text-align: center;
+            color: #0D47A1;
+            margin: 0 6px;
+            outline: none;
+            transition: background 0.2s;
+        }
+        .fill-input:focus {
+            background-color: #BBDEFB;
+            border-bottom-color: #0D47A1;
+        }
+
+        /* 操作按鈕 */
+        .btn-main {
+            font-size: 28px;
+            font-weight: bold;
+            padding: 16px 50px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #0D47A1;
+            transition: all 0.1s;
+            margin: 20px 0;
+        }
+        .btn-main:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #0D47A1;
+        }
+        .btn-main:disabled {
+            background-color: #CFD8DC;
+            box-shadow: 0 6px 0 #90A4AE;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 彈跳提示 Modal (鷹架提示 / 答對特效) */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.65);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            padding: 35px 40px;
+            max-width: 550px;
+            width: 85%;
+            text-align: center;
+            animation: bounceIn 0.4s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.6); opacity: 0; }
+            70% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-icon { font-size: 70px; margin-bottom: 15px; }
+        .modal-title { font-size: 32px; font-weight: bold; margin-bottom: 12px; }
+        .modal-desc { font-size: 24px; line-height: 1.6; color: #455A64; margin-bottom: 25px; }
+
+        /* 結算證書頁面 */
+        .cert-card {
+            background: white;
+            border: 12px double #FFD54F;
+            border-radius: 28px;
+            padding: 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .cert-medal { font-size: 110px; margin: 15px 0; }
+        .cert-item { font-size: 26px; margin: 12px 0; color: #37474F; }
+        .cert-msg { font-size: 30px; font-weight: bold; color: var(--secondary); margin-top: 25px; }
+
+        /* 挑戰失敗頁面 */
+        #fail-screen {
+            background: #263238;
+            color: white;
+            border-radius: 24px;
+            max-width: 600px;
+            margin-top: 50px;
+        }
+        .fail-title { font-size: 48px; color: var(--danger); margin-bottom: 20px; }
+        .btn-restart {
+            background-color: var(--danger);
+            box-shadow: 0 6px 0 #B71C1C;
+        }
+        .btn-restart:active {
+            box-shadow: 0 0 0 #B71C1C;
+        }
+
+        /* 答錯震動特效 */
+        .shake-anim {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-12px); }
+            40%, 80% { transform: translateX(12px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 隱藏版管理員觸發熱區 -->
+    <div id="admin-trigger" onclick="handleAdmin()"></div>
+
+    <!-- 頂部即時計分與時間列 -->
+    <header id="status-bar">
+        <div class="status-badge">
+            <span>🏆 分數：</span>
+            <span id="score-text" class="score-val">20</span>
+        </div>
+        <div class="status-badge">
+            <span>⏳ 剩餘時間：</span>
+            <span id="time-text" class="time-val">15:00</span>
+        </div>
+    </header>
+
+    <!-- 1. 首頁迎新畫面 -->
+    <main id="home-screen" class="screen active">
+        <h1 class="home-title">🌊 水岸地貌大冒險 🌊</h1>
+        <p class="home-subtitle">跟著漫畫分鏡情境，挑戰 20 格地貌知識填空！</p>
+        <input type="text" id="player-input" class="input-name" placeholder="請輸入你的姓名或暱稱" maxlength="15" autocomplete="off">
+        <button class="btn-main" onclick="initGame()">開始挑戰</button>
+    </main>
+
+    <!-- 2. 測驗互動畫面 -->
+    <main id="quiz-screen" class="screen">
+        <div id="quiz-header" class="scene-header"></div>
+        <img id="comic-img" class="comic-frame" src="" alt="漫畫情境" onerror="this.style.display='none'">
+        <div id="questions-wrapper" style="width: 100%;"></div>
+        <button id="submit-btn" class="btn-main" onclick="verifyPage()" disabled>送出答案</button>
+    </main>
+
+    <!-- 3. 挑戰失敗畫面 -->
+    <main id="fail-screen" class="screen">
+        <div style="font-size: 80px;">💥</div>
+        <h1 class="fail-title">挑戰失敗</h1>
+        <p id="fail-desc" style="font-size: 26px; line-height: 1.6;"></p>
+        <button class="btn-main btn-restart" onclick="restartSystem()">重新開始挑戰</button>
+    </main>
+
+    <!-- 4. 結算證書畫面 -->
+    <main id="cert-screen" class="screen">
+        <div class="cert-card">
+            <h1 style="color: var(--primary); margin: 0 0 10px 0;">🎓 探索水岸地貌 完成證照 🎓</h1>
+            <div id="medal-icon" class="cert-medal">🥇</div>
+            <div id="cert-name" class="cert-item"></div>
+            <div id="cert-score" class="cert-item"></div>
+            <div id="cert-time" class="cert-item"></div>
+            <div id="cert-accuracy" class="cert-item"></div>
+            <div id="cert-eval" class="cert-msg"></div>
+            <button class="btn-main" style="margin-top: 30px;" onclick="restartSystem()">再次挑戰</button>
+        </div>
+    </main>
+
+    <!-- 鷹架提示 / 答對回饋 彈窗 -->
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <div id="modal-icon" class="modal-icon"></div>
+            <div id="modal-title" class="modal-title"></div>
+            <div id="modal-desc" class="modal-desc"></div>
+            <button id="modal-btn" class="btn-main" style="font-size: 22px; padding: 10px 35px; margin: 0;" onclick="closeModal()">我知道了</button>
+        </div>
+    </div>
+
+    <script>
+        /* ------------------------------------------------------------------
+           20題完整題庫設定（依10格漫畫鏡頭分頁，每頁1~3題）
+        ------------------------------------------------------------------ */
+        const quizData = [
+            {
+                scene: "漫畫鏡頭 1：高山飛瀑與壯麗峽谷（上游情境）",
+                image: "P01.jpg",
+                items: [
+                    {
+                        id: 1,
+                        text: "在上游山區，因為地勢陡峭、水流湍急，流水作用以（ [blank] ）作用為主，切削出深邃的 V 字谷與瀑布。",
+                        answers: ["侵蝕"],
+                        hint: "第 1 題提示：水流向下切削岩石的力量，是兩個字喔！"
+                    },
+                    {
+                        id: 2,
+                        text: "由於上游水流力量強大，通常只有重量沉重、表面粗糙的（ [blank] ）能留在上游河床上。",
+                        answers: ["大石頭", "巨石"],
+                        hint: "第 2 題提示：上游河床上體積巨大、沉重的石塊稱為什麼呢？（3個字或2個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 2：溪谷滾石與鵝卵石（中游情境）",
+                image: "P02.jpg",
+                items: [
+                    {
+                        id: 3,
+                        text: "河流來到中游地勢漸緩，流水攜帶砂石移動，此時以（ [blank] ）作用最為明顯。",
+                        answers: ["搬運"],
+                        hint: "第 3 題提示：水流將砂石一路帶往下游的作用稱為？（2個字）"
+                    },
+                    {
+                        id: 4,
+                        text: "石頭在隨水流滾動過程中相互碰撞磨擦，稜角逐漸磨圓，形成了表面圓滑的（ [blank] ）。",
+                        answers: ["鵝卵石"],
+                        hint: "第 4 題提示：中游河灘上圓圓滑滑的石子叫作什麼石？（3個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 3：平原平緩河口與三角洲（下游情境）",
+                image: "P03.jpg",
+                items: [
+                    {
+                        id: 5,
+                        text: "河流下游地勢平緩、水流緩慢，流水攜帶能力減弱，泥沙大量沉降產生強烈的（ [blank] ）作用。",
+                        answers: ["堆積"],
+                        hint: "第 5 題提示：泥沙沉澱落下的作用叫作？（2個字）"
+                    },
+                    {
+                        id: 6,
+                        text: "當河流注入大海的河口處，細小的泥沙長期沉積，常形成廣大平坦的地形，稱為（ [blank] ）。",
+                        answers: ["三角洲"],
+                        hint: "第 6 題提示：河口泥沙沉積形成形狀像幾何圖形的地形（3個字）。"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 4：河流彎道的秘密（曲流凹凸岸）",
+                image: "P04.jpg",
+                items: [
+                    {
+                        id: 7,
+                        text: "水流流經曲流彎道時，彎道外側稱為（ [blank] ），因為水流流速較快，受到強烈侵蝕使河岸土石崩落後退。",
+                        answers: ["凹岸"],
+                        hint: "第 7 題提示：彎道外側被沖刷凹進去的是什麼岸？（2個字）"
+                    },
+                    {
+                        id: 8,
+                        text: "彎道內側稱為（ [blank] ），因為水流流速較慢，泥沙大量沉澱，發揮強烈的堆積作用。",
+                        answers: ["凸岸"],
+                        hint: "第 8 題提示：彎道內側泥沙堆積鼓出來的是什麼岸？（2個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 5：凸岸堆積地貌（沙洲生成）",
+                image: "P05.jpg",
+                items: [
+                    {
+                        id: 9,
+                        text: "曲流凸岸長期受泥沙堆積影響，會向河道延伸出平緩的（ [blank] ）。",
+                        answers: ["沙洲"],
+                        hint: "第 9 題提示：水中由泥沙堆積成的小陸地叫作？（2個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 6：時空魔法與牛軛湖誕生（曲流演化）",
+                image: "P06.jpg",
+                items: [
+                    {
+                        id: 10,
+                        text: "當大水切穿河道過於彎曲的頸部後，舊河道兩端淤塞後所留下的半月形湖泊稱為（ [blank] ）。",
+                        answers: ["牛軛湖"],
+                        hint: "第 10 題提示：形狀像耕牛脖子木夾的湖泊叫作什麼湖？（3個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 7：海浪切雕師（海蝕地形）",
+                image: "P07.jpg",
+                items: [
+                    {
+                        id: 11,
+                        text: "海岸岩壁長期受波浪拍打侵蝕基部，上方岩石崩落後形成的陡峭懸崖稱為（ [blank] ）。",
+                        answers: ["海蝕崖"],
+                        hint: "第 11 題提示：海浪侵蝕出來的高聳崖壁是？（3個字）"
+                    },
+                    {
+                        id: 12,
+                        text: "海蝕崖受波浪侵蝕不斷後退後，在崖壁前方基部留下的平坦岩石面稱為（ [blank] ）。",
+                        answers: ["海蝕平臺", "海蝕平台"],
+                        hint: "第 12 題提示：懸崖下平坦的岩石大平臺稱為？（4個字）"
+                    },
+                    {
+                        id: 13,
+                        text: "海浪沖擊侵蝕岩層較鬆軟的縫隙之處，持續掏刷形成的一條條凹槽稱為（ [blank] ）。",
+                        answers: ["海蝕溝"],
+                        hint: "第 13 題提示：海浪沿著岩石裂縫切出的一條條深溝稱為？（3個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 8：天然巨石拱門（海蝕拱門）",
+                image: "P08.jpg",
+                items: [
+                    {
+                        id: 14,
+                        text: "海岸突出岩壁兩側長期受海浪貫穿侵蝕，最終貫通所形成的拱門狀景觀稱為（ [blank] ）（如澎湖鯨魚洞）。",
+                        answers: ["海蝕拱門"],
+                        hint: "第 14 題提示：海邊被海浪打穿的天然石拱門稱為？（4個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 9：浪花堆積的美景（海積地形）",
+                image: "P09.jpg",
+                items: [
+                    {
+                        id: 15,
+                        text: "海浪與沿岸流搬運細小砂粒並沉積於海岸，形成墾丁著名的金黃色（ [blank] ）。",
+                        answers: ["沙灘"],
+                        hint: "第 15 題提示：海邊由細沙沉積成的一大片玩沙場地是？（2個字）"
+                    },
+                    {
+                        id: 16,
+                        text: "海浪堆積圓滑的小石子，則形成花蓮七星潭獨特的（ [blank] ）。",
+                        answers: ["礫石灘"],
+                        hint: "第 16 題提示：由圓滑小石子堆積而成的海灘稱為？（3個字）"
+                    },
+                    {
+                        id: 17,
+                        text: "波浪與海流將泥沙堆積於河口或近海，形成高出海面的長條狀沙脊稱為（ [blank] ）（如雲林外傘頂洲）。",
+                        answers: ["沙洲"],
+                        hint: "第 17 題提示：海邊隆起於海面上的長條形沙地叫作？（2個字）"
+                    }
+                ]
+            },
+            {
+                scene: "漫畫鏡頭 10：珍惜大自然的寶藏（國土與保育）",
+                image: "P10.jpg",
+                items: [
+                    {
+                        id: 18,
+                        text: "雲林外傘頂洲因為泥沙減少加上海浪侵蝕逐年縮小移動，被稱為移動的（ [blank] ）。",
+                        answers: ["流動國土", "移動國土"],
+                        hint: "第 18 題提示：形容外傘頂洲會漂移特性的詞彙（4個字）。"
+                    },
+                    {
+                        id: 19,
+                        text: "綜觀整部漫畫知識點，流水與海浪雕刻地表主要包含侵蝕、搬運與（ [blank] ）三大基本作用。",
+                        answers: ["堆積"],
+                        hint: "第 19 題提示：流水三大作用是「侵蝕、搬運」與什麼？（2個字）"
+                    },
+                    {
+                        id: 20,
+                        text: "瞭解地貌規律，能幫助我們在山坡與海岸切實做好（ [blank] ）工作，減輕天然災害。",
+                        answers: ["水土保持", "環境保護"],
+                        hint: "第 20 題提示：保護土壤與水資源、避免土石流的保育措施叫作？（4個字）"
+                    }
+                ]
+            }
+        ];
+
+        /* ------------------------------------------------------------------
+           全域變數與遊戲狀態控制
+        ------------------------------------------------------------------ */
+        let playerName = "";
+        let currentScore = 20;
+        let defaultTimeMinutes = parseInt(localStorage.getItem("water_quiz_time")) || 15;
+        let remainingSeconds = defaultTimeMinutes * 60;
+        let timerId = null;
+        let currentSceneIndex = 0;
+        let startTime = null;
+        const totalBlanks = 20;
+
+        /* 管理員後台設定功能 */
+        function handleAdmin() {
+            const pwd = prompt("請輸入管理員密碼：");
+            if (pwd === "otwang2026") {
+                const newTime = prompt("請設定挑戰倒數時間（單位：分鐘）：", defaultTimeMinutes);
+                if (newTime && !isNaN(newTime) && Number(newTime) > 0) {
+                    defaultTimeMinutes = parseInt(newTime);
+                    localStorage.setItem("water_quiz_time", defaultTimeMinutes);
+                    alert(`✅ 設定成功！挑戰時間已更新為 ${defaultTimeMinutes} 分鐘。`);
+                    if (timerId) {
+                        remainingSeconds = defaultTimeMinutes * 60;
+                        renderTimer();
+                    }
+                }
+            } else if (pwd !== null) {
+                alert("❌ 密碼錯誤！");
+            }
+        }
+
+        /* 啟動遊戲 */
+        function initGame() {
+            const inputVal = document.getElementById("player-input").value.trim();
+            if (!inputVal) {
+                alert("請先輸入姓名或暱稱喔！");
+                return;
+            }
+            playerName = inputVal;
+            currentScore = 20;
+            remainingSeconds = defaultTimeMinutes * 60;
+            currentSceneIndex = 0;
+            startTime = new Date();
+
+            updateScoreDisplay();
+            renderTimer();
+
+            document.getElementById("home-screen").classList.remove("active");
+            document.getElementById("status-bar").style.display = "flex";
+            document.getElementById("quiz-screen").classList.add("active");
+
+            clearInterval(timerId);
+            timerId = setInterval(tick, 1000);
+            renderCurrentScene();
+        }
+
+        /* 計時器心跳 */
+        function tick() {
+            remainingSeconds--;
+            renderTimer();
+            if (remainingSeconds <= 0) {
+                triggerGameOver("時間到了！別灰心，重新整理思緒再來一次吧！");
+            }
+        }
+
+        function renderTimer() {
+            const mins = Math.floor(remainingSeconds / 60).toString().padStart(2, '0');
+            const secs = (remainingSeconds % 60).toString().padStart(2, '0');
+            document.getElementById("time-text").innerText = `${mins}:${secs}`;
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById("score-text").innerText = currentScore;
+        }
+
+        /* 渲染當前頁面的題目 */
+        function renderCurrentScene() {
+            const sceneData = quizData[currentSceneIndex];
+            document.getElementById("quiz-header").innerText = `【第 ${currentSceneIndex + 1} / ${quizData.length} 幕】${sceneData.scene}`;
+            
+            const imgEl = document.getElementById("comic-img");
+            imgEl.style.display = "block";
+            imgEl.src = sceneData.image;
+
+            const container = document.getElementById("questions-wrapper");
+            container.innerHTML = "";
+
+            sceneData.items.forEach((item, itemIdx) => {
+                const card = document.createElement("div");
+                card.className = "question-card";
+                card.id = `q-card-${item.id}`;
+
+                // 將 [blank] 替換為輸入元件
+                const htmlContent = item.text.replace("[blank]", 
+                    `<input type="text" class="fill-input" data-item-idx="${itemIdx}" data-qid="${item.id}" autocomplete="off" oninput="onInputChanged()">`
+                );
+
+                card.innerHTML = `<strong>第 ${item.id} 題：</strong><br>${htmlContent}`;
+                container.appendChild(card);
+            });
+
+            onInputChanged();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /* 監聽輸入框填寫進度 */
+        function onInputChanged() {
+            const inputs = document.querySelectorAll(".fill-input");
+            let isAllFilled = true;
+            inputs.forEach(input => {
+                if (!input.value.trim()) isAllFilled = false;
+            });
+            document.getElementById("submit-btn").disabled = !isAllFilled;
+        }
+
+        /* 檢核本頁答案 */
+        function verifyPage() {
+            const sceneData = quizData[currentSceneIndex];
+            const inputs = document.querySelectorAll(".fill-input");
+            let hasWrong = false;
+            let firstWrongHint = "";
+
+            inputs.forEach(input => {
+                const itemIdx = parseInt(input.getAttribute("data-item-idx"));
+                const item = sceneData.items[itemIdx];
+                const userAns = input.value.trim();
+                const cardEl = document.getElementById(`q-card-${item.id}`);
+
+                const isCorrect = item.answers.some(ans => ans.toLowerCase() === userAns.toLowerCase());
+
+                if (!isCorrect) {
+                    hasWrong = true;
+                    cardEl.classList.add("shake-anim");
+                    setTimeout(() => cardEl.classList.remove("shake-anim"), 500);
+                    if (!firstWrongHint) {
+                        firstWrongHint = item.hint;
+                    }
+                }
+            });
+
+            if (hasWrong) {
+                // 答錯扣 5 分
+                currentScore -= 5;
+                updateScoreDisplay();
+
+                if (currentScore <= 0) {
+                    triggerGameOver("挑戰能量（分數）已耗盡歸零囉！");
+                    return;
+                }
+
+                showFeedbackModal(
+                    "💡", 
+                    "請再檢查一下喔！", 
+                    `${firstWrongHint}<br><br><span style="color:var(--danger); font-size:20px;">（已扣 5 分，加油！請修正後再送出！）</span>`
+                );
+            } else {
+                // 本頁全對：加分並給予答對動畫
+                const earned = sceneData.items.length * 10;
+                currentScore += earned;
+                updateScoreDisplay();
+
+                showFeedbackModal("⭐", "太棒了！完全正確！", `獲得 +${earned} 分！即將前往下一幕...`);
+
+                setTimeout(() => {
+                    closeModal();
+                    currentSceneIndex++;
+                    if (currentSceneIndex >= quizData.length) {
+                        showCertificate();
+                    } else {
+                        renderCurrentScene();
+                    }
+                }, 1300);
+            }
+        }
+
+        /* 彈窗顯示與關閉 */
+        function showFeedbackModal(icon, title, desc) {
+            document.getElementById("modal-icon").innerText = icon;
+            document.getElementById("modal-title").innerText = title;
+            document.getElementById("modal-desc").innerHTML = desc;
+            document.getElementById("modal-overlay").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("modal-overlay").style.display = "none";
+        }
+
+        /* 觸發挑戰失敗 */
+        function triggerGameOver(reason) {
+            clearInterval(timerId);
+            document.getElementById("status-bar").style.display = "none";
+            document.getElementById("quiz-screen").classList.remove("active");
+            document.getElementById("fail-desc").innerText = reason;
+            document.getElementById("fail-screen").classList.add("active");
+        }
+
+        /* 結算證書 */
+        function showCertificate() {
+            clearInterval(timerId);
+            document.getElementById("status-bar").style.display = "none";
+            document.getElementById("quiz-screen").classList.remove("active");
+
+            const timeSpentSecs = Math.max(1, Math.floor((new Date() - startTime) / 1000));
+            const mins = Math.floor(timeSpentSecs / 60);
+            const secs = timeSpentSecs % 60;
+
+            // 原始總題空應得總分 = 20 格 * 10 分 = 200 分
+            // 答對率比例 = 實際獲得分數 / 220分(初始20分+全對200分)
+            const maxScore = 20 + (totalBlanks * 10);
+            const ratio = currentScore / maxScore;
+            const percentage = Math.max(0, Math.round(ratio * 100));
+
+            let medal = "";
+            let evalMsg = "";
+
+            if (percentage >= 90) {
+                medal = "🥇 金質獎章";
+                evalMsg = "太神了！你是名副其實的水岸地貌大探險家！";
+            } else if (percentage >= 70) {
+                medal = "🥈 銀質獎章";
+                evalMsg = "表現非常優異！對流水海浪作用掌握得相當扎實！";
+            } else if (percentage >= 50) {
+                medal = "🥉 銅質獎章";
+                evalMsg = "恭喜順利過關！若能再少被扣點分數就更完美了！";
+            } else {
+                medal = "✨ 鼓勵賞";
+                evalMsg = "完成挑戰，還需加油！多複習漫畫細節一定能更棒！";
+            }
+
+            document.getElementById("medal-icon").innerText = medal.split(" ")[0];
+            document.getElementById("cert-name").innerText = `🎯 探險隊員：${playerName}`;
+            document.getElementById("cert-score").innerText = `📊 最終得分：${currentScore} 分（滿分 220）`;
+            document.getElementById("cert-time").innerText = `⏱️ 花費時間：${mins} 分 ${secs} 秒`;
+            document.getElementById("cert-accuracy").innerText = `🎖️ 獲得榮譽：${medal}（達成率 ${percentage}%）`;
+            document.getElementById("cert-eval").innerText = evalMsg;
+
+            document.getElementById("cert-screen").classList.add("active");
+        }
+
+        /* 系統重啟 */
+        function restartSystem() {
+            document.getElementById("fail-screen").classList.remove("active");
+            document.getElementById("cert-screen").classList.remove("active");
+            document.getElementById("player-input").value = "";
+            document.getElementById("home-screen").classList.add("active");
+        }
+    </script>
+</body>
+</html>
